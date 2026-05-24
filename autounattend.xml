@@ -182,7 +182,7 @@
         <SynchronousCommand wcm:action="add">
           <Description>Allow Scripts</Description>
           <Order>2</Order>
-          <CommandLine>reg add HKLM\Software\Policies\Microsoft\Windows\Powershell /v ExecutionPolicy /t REG_SZ /d Unrestricted</CommandLine>
+          <CommandLine>reg add HKLM\Software\Policies\Microsoft\Windows\Powershell /v ExecutionPolicy /t REG_SZ /d Bypass</CommandLine>
           <RequiresUserInput>false</RequiresUserInput>
         </SynchronousCommand>
         <SynchronousCommand wcm:action="add">
@@ -200,8 +200,14 @@
         <SynchronousCommand wcm:action="add">
           <Order>5</Order>
           <RequiresUserInput>false</RequiresUserInput>
-          <CommandLine>reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "EasyGPUPSetup" /t REG_SZ /d "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \"C:\ProgramData\Easy-GPU-P\Install.ps1\"" /f</CommandLine>
-          <Description>Register Easy-GPU-P setup for first logon</Description>
+          <CommandLine>schtasks /create /tn "EasyGPUPSetup" /tr "powershell.exe -ExecutionPolicy Bypass -NonInteractive -WindowStyle Hidden -File C:\ProgramData\Easy-GPU-P\Install.ps1" /sc ONLOGON /ru SYSTEM /f</CommandLine>
+          <Description>Register Easy-GPU-P setup task as SYSTEM</Description>
+        </SynchronousCommand>
+        <SynchronousCommand wcm:action="add">
+          <Order>6</Order>
+          <RequiresUserInput>false</RequiresUserInput>
+          <CommandLine>schtasks /run /tn "EasyGPUPSetup"</CommandLine>
+          <Description>Run Easy-GPU-P setup task immediately</Description>
         </SynchronousCommand>
       </FirstLogonCommands>
       <TimeZone>Tokyo Standard Time</TimeZone>
