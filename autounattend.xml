@@ -200,8 +200,8 @@
         <SynchronousCommand wcm:action="add">
           <Order>5</Order>
           <RequiresUserInput>false</RequiresUserInput>
-          <CommandLine>cmd /C start /B "" C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\ProgramData\Easy-GPU-P\Install.ps1</CommandLine>
-          <Description>Run Easy-GPU-P setup scripts</Description>
+          <CommandLine>reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "EasyGPUPSetup" /t REG_SZ /d "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File \"C:\ProgramData\Easy-GPU-P\Install.ps1\"" /f</CommandLine>
+          <Description>Register Easy-GPU-P setup for first logon</Description>
         </SynchronousCommand>
       </FirstLogonCommands>
       <TimeZone>Tokyo Standard Time</TimeZone>
