@@ -17,6 +17,8 @@
     Username = "GPUVM"
     Password = "CoolestPassword!"
     Autologon = "true"
+    TimeZone = "Tokyo Standard Time"
+    Language = "ja-JP"
 }
 
 Import-Module $PSSCriptRoot\Add-VMGpuPartitionAdapterFiles.psm1
@@ -167,6 +169,8 @@ param(
     if((Test-Path -Path $DriveLetter\Windows\system32\GroupPolicy\User\Scripts\Logoff) -eq $true) {} Else {New-Item -Path $DriveLetter\Windows\system32\GroupPolicy\User\Scripts\Logoff -ItemType directory | Out-Null}
     if((Test-Path -Path $DriveLetter\ProgramData\Easy-GPU-P) -eq $true) {} Else {New-Item -Path $DriveLetter\ProgramData\Easy-GPU-P -ItemType directory | Out-Null}
     Copy-Item -Path $psscriptroot\VMScripts\VBCableInstall.ps1 -Destination $DriveLetter\ProgramData\Easy-GPU-P
+    Copy-Item -Path $psscriptroot\VMScripts\SteamInstall.ps1   -Destination $DriveLetter\ProgramData\Easy-GPU-P
+    Copy-Item -Path $psscriptroot\VMScripts\ParsecInstall.ps1  -Destination $DriveLetter\ProgramData\Easy-GPU-P
     Copy-Item -Path $psscriptroot\gpt.ini -Destination $DriveLetter\Windows\system32\GroupPolicy
     Copy-Item -Path $psscriptroot\User\psscripts.ini -Destination $DriveLetter\Windows\system32\GroupPolicy\User\Scripts
     Copy-Item -Path $psscriptroot\User\Install.ps1 -Destination $DriveLetter\Windows\system32\GroupPolicy\User\Scripts\Logon
@@ -4286,8 +4290,19 @@ param (
 [string]$password,
 [string]$autologon,
 [string]$hostname,
-[string]$UnattendPath
+[string]$UnattendPath,
+[string]$TimeZone = "Tokyo Standard Time",
+[string]$Language = "ja-JP"
     )
+    $inputLocaleMap = @{
+        "ja-JP" = "0411:00000411"
+        "en-US" = "0409:00000409"
+        "en-GB" = "0809:00000809"
+        "zh-CN" = "0804:00000804"
+        "ko-KR" = "0412:00000412"
+    }
+    $inputLocale = if ($inputLocaleMap.ContainsKey($Language)) { $inputLocaleMap[$Language] } else { "0409:00000409" }
+
     [xml]$xml = get-content -path $UnattendPath
     ($xml.unattend.settings.component | where-object {$_.autologon}).autologon.password.value = $password
     ($xml.unattend.settings.component | where-object {$_.autologon}).autologon.username = $username
@@ -4297,6 +4312,14 @@ param (
     ($xml.unattend.settings.component | where-object {$_.UserAccounts}).UserAccounts.LocalAccounts.localaccount.DisplayName = $username
     ($xml.unattend.settings.component | where-object {$_.UserAccounts}).UserAccounts.LocalAccounts.localaccount.Password.Value = $password
     ($xml.unattend.settings.component | where-object {$_.Computername}).Computername = $hostname
+    ($xml.unattend.settings.component | where-object {$_.TimeZone}).TimeZone = $TimeZone
+    foreach ($component in ($xml.unattend.settings.component | where-object {$_.UILanguage})) {
+        if ($component.SetupUILanguage) { $component.SetupUILanguage.UILanguage = $Language }
+        $component.UILanguage          = $Language
+        $component.SystemLocale        = $Language
+        $component.UserLocale          = $Language
+        $component.InputLocale         = $inputLocale
+    }
     $xml.Save("$UnattendPath")
 }
 
@@ -4346,7 +4369,9 @@ param(
 [string]$Key,
 [string]$username,
 [string]$password,
-[string]$autologon
+[string]$autologon,
+[string]$TimeZone = "Tokyo Standard Time",
+[string]$Language = "ja-JP"
 )
     $VHDPath = ConcatenateVHDPath -VHDPath $VHDPath -VMName $VMName
     $DriveLetter = Mount-ISOReliable -SourcePath $SourcePath
@@ -4357,7 +4382,7 @@ param(
     if (Test-Path $vhdPath) {
         SmartExit -ExitReason "Virtual Machine Disk already exists at $vhdPath, please delete existing VHDX or change VMName"
         }
-    Modify-AutoUnattend -username "$username" -password "$password" -autologon $autologon -hostname $VMName -UnattendPath $UnattendPath
+    Modify-AutoUnattend -username "$username" -password "$password" -autologon $autologon -hostname $VMName -UnattendPath $UnattendPath -TimeZone $TimeZone -Language $Language
     $MaxAvailableVersion = (Get-VMHostSupportedVersion).Version | Where-Object {$_.Major -lt 254}| Select-Object -Last 1 
     Convert-WindowsImage -SourcePath $SourcePath -ISODriveLetter $DriveLetter -Edition $Edition -VHDFormat $Vhdformat -VHDPath $VhdPath -DiskLayout $DiskLayout -UnattendPath $UnattendPath -GPUName $GPUName -Team_ID $Team_ID -Key $Key -SizeBytes $SizeBytes| Out-Null
     if (Test-Path $vhdPath) {

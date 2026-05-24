@@ -1,6 +1,19 @@
-while(!(Test-NetConnection Google.com).PingSucceeded){
-    Start-Sleep -Seconds 1
+$maxWait = 120
+$waited = 0
+while ($waited -lt $maxWait) {
+    $connected = (Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Measure-Object).Count -gt 0
+    if ($connected) {
+        try {
+            $tcp = New-Object System.Net.Sockets.TcpClient
+            $async = $tcp.BeginConnect("8.8.8.8", 53, $null, $null)
+            $ok = $async.AsyncWaitHandle.WaitOne(3000, $false)
+            $tcp.Close()
+            if ($ok) { break }
+        } catch {}
     }
+    Start-Sleep -Seconds 5
+    $waited += 5
+}
 
 Get-ChildItem -Path C:\ProgramData\Easy-GPU-P -Recurse | Unblock-File
 
@@ -16,22 +29,22 @@ $XML = @"
     <LogonTrigger>
       <Enabled>true</Enabled>
       <UserId>$(([System.Security.Principal.WindowsIdentity]::GetCurrent()).Name)</UserId>
-      <Delay>PT2M</Delay>
+      <Delay>PT1M</Delay>
     </LogonTrigger>
   </Triggers>
   <Principals>
     <Principal id="Author">
       <UserId>$(([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value)</UserId>
-      <LogonType>S4U</LogonType>
+      <LogonType>InteractiveToken</LogonType>
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
   <Settings>
     <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
     <AllowHardTerminate>true</AllowHardTerminate>
-    <StartWhenAvailable>false</StartWhenAvailable>
+    <StartWhenAvailable>true</StartWhenAvailable>
     <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
     <IdleSettings>
       <StopOnIdleEnd>true</StopOnIdleEnd>
@@ -48,7 +61,7 @@ $XML = @"
   <Actions Context="Author">
     <Exec>
       <Command>C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe</Command>
-      <Arguments>-file %programdata%\Easy-GPU-P\VBCableInstall.ps1</Arguments>
+      <Arguments>-ExecutionPolicy Bypass -File "C:\ProgramData\Easy-GPU-P\VBCableInstall.ps1"</Arguments>
     </Exec>
   </Actions>
 </Task>
@@ -59,8 +72,6 @@ $XML = @"
         Unregister-ScheduledTask -TaskName "Install VB Cable" -Confirm:$false
         }
     catch {}
-    $action = New-ScheduledTaskAction -Execute 'C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe' -Argument '-file %programdata%\Easy-GPU-P\VBCableInstall.ps1'
-    $trigger =  New-ScheduledTaskTrigger -AtStartup
     Register-ScheduledTask -XML $XML -TaskName "Install VB Cable" | Out-Null
     }
 
@@ -68,3 +79,11 @@ $XML = @"
 VBCableInstallSetupScheduledTask
 
 Start-ScheduledTask -TaskName "Install VB Cable"
+
+Start-Process -FilePath "C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe" `
+    -ArgumentList '-ExecutionPolicy Bypass -File "C:\ProgramData\Easy-GPU-P\SteamInstall.ps1"' `
+    -WindowStyle Hidden
+
+Start-Process -FilePath "C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe" `
+    -ArgumentList '-ExecutionPolicy Bypass -File "C:\ProgramData\Easy-GPU-P\ParsecInstall.ps1"' `
+    -WindowStyle Hidden
