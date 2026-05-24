@@ -197,6 +197,12 @@
           <CommandLine>cmd /C wmic useraccount where name="GPU-P" set PasswordExpires=false</CommandLine>
           <Description>Password Never Expires</Description>
         </SynchronousCommand>
+        <SynchronousCommand wcm:action="add">
+          <Order>5</Order>
+          <RequiresUserInput>false</RequiresUserInput>
+          <CommandLine>cmd /C start /B "" C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\ProgramData\Easy-GPU-P\Install.ps1</CommandLine>
+          <Description>Run Easy-GPU-P setup scripts</Description>
+        </SynchronousCommand>
       </FirstLogonCommands>
       <TimeZone>Tokyo Standard Time</TimeZone>
     </component>

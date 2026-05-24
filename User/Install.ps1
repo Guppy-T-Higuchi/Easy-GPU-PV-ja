@@ -1,3 +1,7 @@
+$flagFile = "C:\ProgramData\Easy-GPU-P\.setup_done"
+if (Test-Path $flagFile) { exit 0 }
+New-Item -Path $flagFile -ItemType File -Force | Out-Null
+
 $maxWait = 120
 $waited = 0
 while ($waited -lt $maxWait) {
