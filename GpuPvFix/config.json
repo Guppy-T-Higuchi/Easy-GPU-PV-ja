@@ -1,0 +1,12 @@
+{
+  "MonitorIntervalSeconds": 30,
+  "ProbeIntervalMinutes": 15,
+  "CheckOpenGL": true,
+  "CheckVulkan": true,
+  "EnsureHyperVVideoEnabled": true,
+  "Remediate": true,
+  "RemediationSteps": ["scan-devices", "restart-hyperv-video"],
+  "CooldownMinutes": 5,
+  "MaxRemediationsPerBoot": 3,
+  "GpuNamePattern": ""
+}
