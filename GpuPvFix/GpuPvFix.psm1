@@ -46,21 +46,26 @@ function Write-GpuPvFixLog {
 
 # ------------------------------------------------------------------ devices
 
+function Get-GpuPvFixDeviceKind {
+    # Classifies by driver service / device ID, not by name: names are localized
+    # ("Microsoft Hyper-V ビデオ") and the GPU-PV adapter reports Microsoft's vendor ID (PCI\VEN_1414).
+    param([string]$Name, [string]$InstanceId, [string]$Service, $Config)
+    if ($Service -eq "HyperVideo" -or $InstanceId -like "VMBUS\{DA0A7802-E377-4AAC-8E77-0558EB1073F8}*") { return "HyperVVideo" }
+    if ($Service -eq "BasicDisplay") { return "BasicDisplay" }
+    if ($Name -like "*Parsec*") { return "ParsecVdd" }
+    if ($Config.GpuNamePattern) { if ($Name -match $Config.GpuNamePattern) { return "Gpu" } else { return "Other" } }
+    if ($InstanceId -like "PCI\*") { return "Gpu" }
+    "Other"
+}
+
 function Get-GpuPvFixDisplayDevices {
     param($Config = (Get-GpuPvFixConfig))
     Get-CimInstance Win32_PnPEntity -Filter "PNPClass='Display'" | ForEach-Object {
         $name = [string]$_.Name
-        $kind =
-            if ($name -like "*Hyper-V Video*") { "HyperVVideo" }
-            elseif ($name -like "Microsoft Basic*") { "BasicDisplay" }
-            elseif ($name -like "*Parsec*") { "ParsecVdd" }
-            elseif ($Config.GpuNamePattern -and $name -match $Config.GpuNamePattern) { "Gpu" }
-            elseif (!$Config.GpuNamePattern -and $_.Manufacturer -notlike "Microsoft*" -and
-                    $_.PNPDeviceID -notlike "ROOT\*" -and $name -notmatch "Virtual|Idd") { "Gpu" }
-            else { "Other" }
         [pscustomobject]@{
-            Kind       = $kind
+            Kind       = Get-GpuPvFixDeviceKind -Name $name -InstanceId $_.PNPDeviceID -Service $_.Service -Config $Config
             Name       = $name
+            Service    = [string]$_.Service
             InstanceId = [string]$_.PNPDeviceID
             ErrorCode  = [int]$_.ConfigManagerErrorCode   # 0 = OK, 22 = disabled
             Ok         = ($_.ConfigManagerErrorCode -eq 0)

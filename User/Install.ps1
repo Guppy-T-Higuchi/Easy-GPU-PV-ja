@@ -21,6 +21,10 @@ while ($waited -lt $maxWait) {
 
 Get-ChildItem -Path C:\ProgramData\Easy-GPU-P -Recurse | Unblock-File
 
+# GPU-PV Fix: keeps OpenGL/Vulkan on the GPU-PV adapter (needs no network)
+$gpuPvFixInstaller = "C:\ProgramData\Easy-GPU-P\GpuPvFix\Install-Guest.ps1"
+if (Test-Path $gpuPvFixInstaller) { try { & $gpuPvFixInstaller } catch {} }
+
 # Run each install script directly — running as SYSTEM, no UAC needed
 & "C:\ProgramData\Easy-GPU-P\VBCableInstall.ps1"
 & "C:\ProgramData\Easy-GPU-P\SteamInstall.ps1"

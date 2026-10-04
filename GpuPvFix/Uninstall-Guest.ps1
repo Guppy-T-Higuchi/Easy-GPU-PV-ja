@@ -17,6 +17,7 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
     Where-Object { $_.CommandLine -like "*Easy-GPU-P\GpuPvFix\Monitor.ps1*" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep -Seconds 1
+if (Test-Path $InstallDir) { & icacls.exe $InstallDir /reset /T /C /Q | Out-Null }   # repair ACLs so everything can be deleted
 
 if ($KeepLogs) {
     Get-ChildItem $InstallDir -Exclude logs -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force

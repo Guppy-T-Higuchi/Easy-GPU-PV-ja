@@ -31,7 +31,11 @@ foreach ($name in $VMName) {
         if ($Uninstall) {
             Invoke-Command -Session $session -ScriptBlock {
                 $u = "$env:ProgramData\Easy-GPU-P\GpuPvFix\Uninstall-Guest.ps1"
-                if (Test-Path $u) { Set-ExecutionPolicy -Scope Process Bypass -Force; & $u } else { "Not installed." }
+                if (Test-Path $u) {
+                    try { Set-ExecutionPolicy -Scope Process Bypass -Force -ErrorAction Stop } catch {}   # may be fixed by Group Policy
+                    Unblock-File $u
+                    & $u
+                } else { "Not installed." }
             }
             continue
         }
@@ -45,10 +49,13 @@ foreach ($name in $VMName) {
 
         Invoke-Command -Session $session -ScriptBlock {
             param($dir, $reset)
-            Set-ExecutionPolicy -Scope Process Bypass -Force
-            try { & "$dir\Install-Guest.ps1" -SourceDir $dir -ResetConfig:$reset }
+            # The VM may fix the execution policy by Group Policy (e.g. Unrestricted); then the override is
+            # refused, which is fine as long as the copied files no longer carry the "downloaded" mark.
+            try { Set-ExecutionPolicy -Scope Process Bypass -Force -ErrorAction Stop } catch {}
+            Get-ChildItem $dir -Recurse -File | Unblock-File
+            try { & "$dir\Install-Guest.ps1" -SourceDir $dir -ResetConfig:([bool]$reset) }
             finally { Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue }
-        } -ArgumentList $staging, [bool]$ResetConfig
+        } -ArgumentList $staging, $ResetConfig.IsPresent
 
         Write-Host "[$name] done." -ForegroundColor Green
     } finally {

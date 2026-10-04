@@ -32,6 +32,8 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
 Start-Sleep -Seconds 1
 
 # 2. files + ACLs (SYSTEM runs Monitor.ps1 from here, so users must not be able to modify it)
+# Reset ACLs first so files left with broken ACLs by an earlier install can be overwritten.
+if (Test-Path $InstallDir) { & icacls.exe $InstallDir /reset /T /C /Q | Out-Null }
 foreach ($d in @($InstallDir, "$InstallDir\bin", "$InstallDir\state", "$InstallDir\logs")) {
     New-Item $d -ItemType Directory -Force | Out-Null
 }
@@ -43,8 +45,14 @@ if ((Resolve-Path $SourceDir).Path.TrimEnd('\') -ne (Resolve-Path $InstallDir).P
         Copy-Item (Join-Path $SourceDir "config.json") $InstallDir -Force
     }
 }
-& icacls.exe $InstallDir /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" /T /C /Q | Out-Null
-& icacls.exe "$InstallDir\state" /grant "*S-1-5-32-545:(OI)(CI)M" /T /C /Q | Out-Null
+# Files copied from a download keep the Zone.Identifier mark; under an Unrestricted policy the
+# non-interactive Monitor task would then be blocked by the "Run once?" prompt.
+Get-ChildItem $InstallDir -Recurse -File | Unblock-File
+# Set the ACL on the folder only and let everything below inherit it. (Applying it with /T would
+# strip the inherited entries from each file without adding the (OI)(CI) ones, leaving an empty DACL.)
+& icacls.exe $InstallDir /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" /C /Q | Out-Null
+& icacls.exe "$InstallDir\*" /reset /T /C /Q | Out-Null
+& icacls.exe "$InstallDir\state" /grant "*S-1-5-32-545:(OI)(CI)M" /C /Q | Out-Null
 Remove-Item "$InstallDir\state\*" -Force -ErrorAction SilentlyContinue
 
 # 3. build GpuPvProbe.exe with the C# compiler that ships with .NET Framework (separate process: no type clash on re-install)

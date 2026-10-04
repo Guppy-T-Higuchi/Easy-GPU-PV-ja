@@ -55,6 +55,10 @@ Copy this folder into the VM and run from an elevated PowerShell:
 powershell -ExecutionPolicy Bypass -File .\Install-Guest.ps1
 ```
 
+### New VMs
+
+VMs created with `CopyFilesToVM.ps1` get it installed automatically by `Install.ps1` at first logon.
+
 ## Check / manual fix (inside the VM)
 
 ```powershell
